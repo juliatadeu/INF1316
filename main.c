@@ -5,9 +5,9 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <fcntl.h>
+#include "gmv.h"
 
-#define NUM_PROCESSES 4
-#define NUM_ROUNDS 4
+#define NUM_ROUNDS 6
 #define MAX_LINE 100
 
 const char *filenames[] = {
@@ -20,6 +20,12 @@ const char *filenames[] = {
 int main() {
     pid_t children[NUM_PROCESSES];
     int pipes[NUM_PROCESSES][2]; // pipe[i][0]: read end (pai), pipe[i][1]: write end (filho)
+    pagetable_t pt[NUM_PROCESSES];
+    frame_t frames[NUM_FRAMES];
+    int page_faults = 0;
+
+    init_pagetables(pt);
+    init_frames(frames);
 
     // Cria os pipes
     for (int i = 0; i < NUM_PROCESSES; i++) {
@@ -28,7 +34,7 @@ int main() {
             exit(1);
         }
     }
-
+    
     // Cria os processos filhos
     for (int i = 0; i < NUM_PROCESSES; i++) {
         pid_t pid = fork();
@@ -85,13 +91,19 @@ int main() {
         if (n > 0) {
             buffer[n] = '\0';
             printf("GMV recebeu de P%d: %s", current + 1, buffer);
+
+            int page;
+            char oper;
+            if (sscanf(buffer, "%d %c", &page, &oper) == 2) {
+                run_2nCh(&pt[current], frames, &page_faults, current, page, oper);
+            }
         }
 
         kill(pid_atual, SIGSTOP); // pausa novamente
         current = (current + 1) % NUM_PROCESSES;
     }
 
-    // Libera os filhos para terminarem
+        // Libera os filhos para terminarem
     for (int i = 0; i < NUM_PROCESSES; i++) {
         kill(children[i], SIGCONT);
     }
@@ -102,6 +114,12 @@ int main() {
         close(pipes[i][0]); // fecha leitura do pipe
     }
 
-    printf("Todos os processos filhos terminaram.\n");
+    printf("\nTodos os processos filhos terminaram.\n");
+    printf("Page faults totais: %d\n", page_faults);
+    for (int i = 0; i < NUM_PROCESSES; i++) {
+        printf("\nTabela de páginas do processo %d:\n", i + 1);
+        print_pagetable(&pt[i]);
+    }
+
     return 0;
 }

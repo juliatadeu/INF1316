@@ -42,7 +42,7 @@ typedef struct {
 void run_nru(pagetable_t *pt, frame_t *frames, int *page_faults);
 
 // Algoritmo Segunda Chance
-void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults);
+void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type);
 
 // Algoritmo LRU (Least Recently Used) / Aging
 void run_lru(pagetable_t *pt, frame_t *frames, int *page_faults);

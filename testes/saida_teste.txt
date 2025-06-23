@@ -1,0 +1,85 @@
+GMV recebeu de P1: 0 R
+PAGE FAULT: Processo 1, página 0
+GMV recebeu de P2: 8 R
+PAGE FAULT: Processo 2, página 8
+GMV recebeu de P3: 16 R
+PAGE FAULT: Processo 3, página 16
+GMV recebeu de P4: 24 R
+PAGE FAULT: Processo 4, página 24
+GMV recebeu de P1: 1 W
+PAGE FAULT: Processo 1, página 1
+GMV recebeu de P2: 9 W
+PAGE FAULT: Processo 2, página 9
+GMV recebeu de P3: 17 W
+PAGE FAULT: Processo 3, página 17
+GMV recebeu de P4: 25 W
+PAGE FAULT: Processo 4, página 25
+GMV recebeu de P1: 2 R
+PAGE FAULT: Processo 1, página 2
+GMV recebeu de P2: 10 R
+PAGE FAULT: Processo 2, página 10
+GMV recebeu de P3: 18 R
+PAGE FAULT: Processo 3, página 18
+GMV recebeu de P4: 26 R
+PAGE FAULT: Processo 4, página 26
+GMV recebeu de P1: 3 W
+PAGE FAULT: Processo 1, página 3
+GMV recebeu de P2: 11 W
+PAGE FAULT: Processo 2, página 11
+GMV recebeu de P3: 19 W
+PAGE FAULT: Processo 3, página 19
+GMV recebeu de P4: 27 W
+PAGE FAULT: Processo 4, página 27
+GMV recebeu de P1: 4 R
+PAGE FAULT: Processo 1, página 4
+GMV recebeu de P2: 12 R
+PAGE FAULT: Processo 2, página 12
+GMV recebeu de P3: 20 R
+PAGE FAULT: Processo 3, página 20
+Página suja: escrevendo P3-pag16 no swap
+GMV recebeu de P4: 28 R
+PAGE FAULT: Processo 4, página 28
+Página suja: escrevendo P4-pag24 no swap
+GMV recebeu de P1: 5 W
+PAGE FAULT: Processo 1, página 5
+Página suja: escrevendo P1-pag1 no swap
+GMV recebeu de P2: 13 W
+PAGE FAULT: Processo 2, página 13
+GMV recebeu de P3: 21 W
+PAGE FAULT: Processo 3, página 21
+Página suja: escrevendo P3-pag17 no swap
+GMV recebeu de P4: 29 W
+PAGE FAULT: Processo 4, página 29
+
+Todos os processos filhos terminaram.
+Page faults totais: 24
+
+Tabela de páginas do processo 1:
+Página  2 → Quadro  8 | R=0 M=0
+Página  3 → Quadro 12 | R=0 M=1
+Página  4 → Quadro  0 | R=1 M=0
+Página  5 → Quadro  4 | R=1 M=1
+
+Tabela de páginas do processo 2:
+Página  8 → Quadro  1 | R=0 M=0
+Página  9 → Quadro  5 | R=0 M=1
+Página 10 → Quadro  9 | R=0 M=0
+Página 11 → Quadro 13 | R=0 M=1
+Página 12 → Quadro  1 | R=1 M=0
+Página 13 → Quadro  5 | R=1 M=1
+
+Tabela de páginas do processo 3:
+Página 16 → Quadro  2 | R=0 M=0
+Página 17 → Quadro  6 | R=0 M=1
+Página 18 → Quadro 10 | R=0 M=0
+Página 19 → Quadro 14 | R=0 M=1
+Página 20 → Quadro  2 | R=1 M=0
+Página 21 → Quadro  6 | R=1 M=1
+
+Tabela de páginas do processo 4:
+Página 24 → Quadro  3 | R=0 M=0
+Página 25 → Quadro  7 | R=0 M=1
+Página 26 → Quadro 11 | R=0 M=0
+Página 27 → Quadro 15 | R=0 M=1
+Página 28 → Quadro  3 | R=1 M=0
+Página 29 → Quadro  7 | R=1 M=1
