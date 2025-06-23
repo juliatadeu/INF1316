@@ -23,6 +23,7 @@ typedef struct {
     int modified;   // Se a página foi modificada (1 = sim, 0 = não)
     int referenced; // Se a página foi referenciada (1 = sim, 0 = não)
     int frame_no;   // Número do quadro onde a página está armazenada
+    int last_accessed; 
 } page_entry_t;
 
 // Estrutura para representar a tabela de páginas de um processo
@@ -64,4 +65,9 @@ void read_access_file(const char *filename, int *accesses, char *operations);
 // Função para imprimir a tabela de páginas de um processo
 void print_pagetable(pagetable_t *pt);
 
+void run_lru(pagetable_t *pt, frame_t *frames, int *page_faults);
+
+void update_access_time(pagetable_t *pt, int pid, int page_no, int current_time);
+
 #endif // GMV_H
+
