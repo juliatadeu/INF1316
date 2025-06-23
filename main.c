@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include "gmv.h"
 
-#define NUM_ROUNDS 6
 #define MAX_LINE 100
 
 const char *filenames[] = {
@@ -15,19 +14,26 @@ const char *filenames[] = {
     "acessos/acessos_P2",
     "acessos/acessos_P3",
     "acessos/acessos_P4"
-};int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Uso: %s <algoritmo>\n", argv[0]);
-        fprintf(stderr, "Algoritmos suportados: nru, 2ch\n");
-        return 1;
-    }
+};
 
-    char *algoritmo = argv[1];
+
+int main() {
+    char algoritmo[10];
+    int NUM_ROUNDS;
+
+    printf("Digite o algoritmo (nru / 2ch / ws): ");
+    scanf("%s", algoritmo);
+    printf("Digite o número de rodadas: ");
+    scanf("%d", &NUM_ROUNDS);
+
+    printf("\nAlgoritmo de Substituição: %s\n", algoritmo);
+    printf("Rodadas executadas: %d\n\n", NUM_ROUNDS);
 
     pid_t children[NUM_PROCESSES];
     int pipes[NUM_PROCESSES][2];
     pagetable_t pt[NUM_PROCESSES];
     frame_t frames[NUM_FRAMES];
+    working_set_t ws_hist[NUM_PROCESSES] = {0};
     int page_faults = 0;
     int faults_por_processo[NUM_PROCESSES] = {0};
 
@@ -91,14 +97,21 @@ const char *filenames[] = {
             char oper;
             if (sscanf(buffer, "%d %c", &page, &oper) == 2) {
                 int before = page_faults;
+
                 if (strcmp(algoritmo, "2ch") == 0) {
                     run_2nCh(&pt[current], frames, &page_faults, current, page, oper);
+
                 } else if (strcmp(algoritmo, "nru") == 0) {
                     run_nru(pt, frames, &page_faults, current, page, oper);
+
+                } else if (strcmp(algoritmo, "ws") == 0) {
+                    run_ws(pt, frames, &page_faults, current, page, oper, ws_hist);
+
                 } else {
                     fprintf(stderr, "Algoritmo não reconhecido: %s\n", algoritmo);
                     exit(1);
                 }
+
                 if (page_faults > before)
                     faults_por_processo[current]++;
             }

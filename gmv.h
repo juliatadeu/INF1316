@@ -16,6 +16,7 @@
 // Definindo os tipos de acessos
 #define READ  'R'
 #define WRITE 'W'
+#define WS_K 4 // tamanho da janela de working set
 
 // Estrutura para representar uma página
 typedef struct {
@@ -35,6 +36,11 @@ typedef struct {
     int pid;      // ID do processo que possui a página
     int page_no;  // Número da página armazenada no quadro
 } frame_t;
+// Histórico de acessos (janela deslizante)
+typedef struct {
+    int acesso[WS_K];
+    int ponteiro;
+} working_set_t;
 
 // Funções para os algoritmos de substituição de páginas
 
@@ -47,7 +53,7 @@ void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int p
 void run_lru(pagetable_t *pt, frame_t *frames, int *page_faults);
 
 // Algoritmo Working Set
-void run_ws(pagetable_t *pt, frame_t *frames, int *page_faults, int k);
+void run_ws(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type, working_set_t *ws_hist);
 
 // Função de inicialização das tabelas de páginas
 void init_pagetables(pagetable_t *pt);

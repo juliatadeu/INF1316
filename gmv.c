@@ -143,6 +143,78 @@ void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, in
     }
 }
 
+void run_ws(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type, working_set_t *ws_hist) {
+    page_entry_t *entry = &pt[pid].table[page];
+
+    // Atualiza histórico
+    ws_hist[pid].acesso[ws_hist[pid].ponteiro] = page;
+    ws_hist[pid].ponteiro = (ws_hist[pid].ponteiro + 1) % WS_K;
+
+    if (entry->present) {
+        entry->referenced = 1;
+        if (access_type == WRITE) entry->modified = 1;
+        return;
+    }
+
+    printf("PAGE FAULT: Processo %d, página %d\n", pid + 1, page);
+    (*page_faults)++;
+
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (frames[i].pid == -1) {
+            frames[i].pid = pid;
+            frames[i].page_no = page;
+            entry->present = 1;
+            entry->referenced = 1;
+            entry->modified = (access_type == WRITE);
+            entry->frame_no = i;
+            return;
+        }
+    }
+
+    // Substituição com base em páginas fora da janela
+    int candidata = -1;
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        int vpid = frames[i].pid;
+        int vpage = frames[i].page_no;
+        int na_janela = 0;
+        for (int j = 0; j < WS_K; j++) {
+            if (ws_hist[vpid].acesso[j] == vpage) {
+                na_janela = 1;
+                break;
+            }
+        }
+        if (!na_janela) {
+            candidata = i;
+            break;
+        }
+    }
+
+    if (candidata == -1) candidata = 0; // fallback
+
+    int victim_pid = frames[candidata].pid;
+    int victim_page = frames[candidata].page_no;
+    page_entry_t *victim = &pt[victim_pid].table[victim_page];
+
+    if (victim->modified)
+        printf("Página suja: escrevendo P%d-pag%d no swap\n", victim_pid + 1, victim_page);
+
+    victim->present = 0;
+    victim->referenced = 0;
+    victim->modified = 0;
+    victim->frame_no = -1;
+
+    frames[candidata].pid = pid;
+    frames[candidata].page_no = page;
+
+    entry->present = 1;
+    entry->referenced = 1;
+    entry->modified = (access_type == WRITE);
+    entry->frame_no = candidata;
+
+    printf("→ Page-fault gerado por P%d, página %d\n", pid + 1, page);
+    printf("→ Quadro perdido por P%d\n", victim_pid + 1);
+}
+
 
 void print_pagetable(pagetable_t *pt) {
     for (int i = 0; i < NUM_PAGES; i++) {
