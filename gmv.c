@@ -224,3 +224,48 @@ void print_pagetable(pagetable_t *pt) {
         }
     }
 }
+
+void run_lru(pagetable_t *pt, frame_t *frames, int *page_faults) {
+    int i, j;
+    int page_to_replace = -1;
+    int frame_to_replace = -1;
+    int oldest_access_time = -1;
+
+    // Percorre os quadros de memória para encontrar o quadro a ser substituído
+    for (i = 0; i < NUM_FRAMES; i++) {
+        if (frames[i].page_no != -1) {  // Se o quadro está ocupado
+            int pid = frames[i].pid;
+            int page_no = frames[i].page_no;
+
+            // Verifica o tempo do último acesso da página nesse quadro
+            int access_time = pt[pid].table[page_no].last_accessed;
+
+            // Se essa página foi menos recentemente usada, ela é a candidata a substituição
+            if (oldest_access_time == -1 || access_time < oldest_access_time) {
+                oldest_access_time = access_time;
+                page_to_replace = page_no;
+                frame_to_replace = i;
+            }
+        }
+    }
+
+    // Se encontrou uma página a ser substituída, faz a substituição
+    if (page_to_replace != -1) {
+        // Substitui a página no quadro
+        printf("Substituindo a página %d do processo %d pelo quadro %d\n", page_to_replace, frames[frame_to_replace].pid, frame_to_replace);
+
+        // Atualiza a página no quadro
+        frames[frame_to_replace].page_no = page_to_replace;
+        frames[frame_to_replace].pid = pt[frames[frame_to_replace].pid].table[page_to_replace].frame_no;
+
+        // Marca um page-fault
+        (*page_faults)++;
+    }
+    else {
+        printf("Nenhuma página encontrada para substituição (todas estão em uso recente).\n");
+    }
+}
+
+void update_access_time(pagetable_t *pt, int pid, int page_no, int current_time) {
+    pt[pid].table[page_no].last_accessed = current_time;
+}
