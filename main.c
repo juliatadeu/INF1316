@@ -17,6 +17,79 @@ const char *filenames[] = {
     "acessos/acessos_P4"
 };
 
+void init_pagetables(pagetable_t *pt) {
+    for (int i = 0; i < NUM_PROCESSES; i++) {
+        for (int j = 0; j < NUM_PAGES; j++) {
+            pt[i].table[j].present = 0;    // Página não está na memória inicialmente
+            pt[i].table[j].modified = 0;   // Página não foi modificada
+            pt[i].table[j].referenced = 0; // Página não foi referenciada
+            pt[i].table[j].frame_no = -1;  // Página não tem quadro de memória
+        }
+    }
+}
+
+void init_frames(frame_t *frames) {
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        frames[i].pid = -1;   // Nenhum processo usando o quadro inicialmente
+        frames[i].page_no = -1; // Nenhuma página alocada ao quadro inicialmente
+    }
+}
+
+void run_nru(pagetable_t *pt, frame_t *frames, int *page_faults) {
+    int i, j;
+    int page_to_replace = -1;
+    int frame_to_replace = -1;
+
+    // Percorre a tabela de páginas de todos os processos
+    for (i = 0; i < NUM_PROCESSES; i++) {
+        // Percorre todas as páginas do processo i
+        for (j = 0; j < NUM_PAGES; j++) {
+            // Verifica se a página não foi referenciada e não foi modificada
+            if (pt[i].table[j].referenced == 0 && pt[i].table[j].modified == 0) {
+                // Encontra a primeira página que atende aos critérios
+                page_to_replace = j;
+                break;
+            }
+        }
+        
+        if (page_to_replace != -1) {
+            // Encontrou uma página para substituir
+            for (int k = 0; k < NUM_FRAMES; k++) {
+                if (frames[k].pid == i && frames[k].page_no == page_to_replace) {
+                    frame_to_replace = k;
+                    break;
+                }
+            }
+
+            if (frame_to_replace != -1) {
+                // Substitui a página
+                printf("Substituindo a página %d do processo %d pelo quadro %d\n", page_to_replace, i, frame_to_replace);
+                pt[i].table[page_to_replace].referenced = 0;  // Resetar o bit de referência
+                pt[i].table[page_to_replace].modified = 0;   // Resetar o bit de modificação
+
+                // Caso tenha sido uma página modificada, registra no quadro
+                if (frames[frame_to_replace].page_no != -1) {
+                    // Se o quadro já contiver uma página, esta será substituída
+                    printf("A página %d foi substituída no quadro %d\n", frames[frame_to_replace].page_no, frame_to_replace);
+                }
+                frames[frame_to_replace].page_no = page_to_replace;
+                frames[frame_to_replace].pid = i;
+
+                // Registra um page fault
+                (*page_faults)++;
+            }
+
+            break; // Sai do loop assim que encontrar a página para substituir
+        }
+    }
+
+    // Se não encontrou nenhuma página para substituir, o algoritmo não fez nenhuma substituição
+    if (page_to_replace == -1) {
+        printf("Nenhuma página encontrada para substituição (todas estão referenciadas ou modificadas).\n");
+    }
+}
+
+
 int main() {
     pid_t children[NUM_PROCESSES];
     int pipes[NUM_PROCESSES][2]; // pipe[i][0]: read end (pai), pipe[i][1]: write end (filho)
