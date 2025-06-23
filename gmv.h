@@ -39,8 +39,7 @@ typedef struct {
 // Funções para os algoritmos de substituição de páginas
 
 // Algoritmo NRU (Not Recently Used)
-void run_nru(pagetable_t *pt, frame_t *frames, int *page_faults);
-
+void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, int page, char access_type);
 // Algoritmo Segunda Chance
 void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type);
 
