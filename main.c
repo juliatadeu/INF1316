@@ -6,6 +6,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include "gmv.h"
+#include "auxiliar.h"
 
 #define MAX_LINE 100
 
@@ -17,6 +18,18 @@ const char *filenames[] = {
 };
 
 
+algorithm_t get_algorithm(const char *algorithm_name) {
+    if (strcmp(algorithm_name, "nru") == 0) return NRU;
+    if (strcmp(algorithm_name, "lru") == 0) return LRU;
+    if (strcmp(algorithm_name, "2ch") == 0) return SECOND_CHANCE;
+    if (strcmp(algorithm_name, "ws") == 0) return WORKING_SET;
+    return INVALID_ALGORITHM;
+}
+void print_usage() {
+    printf("Uso: ./main <algoritmo> <número de rodadas>\n");
+    printf("Algoritmos disponíveis: nru, lru, 2ch, ws\n");
+    printf("Exemplo: ./main nru 10\n");
+}
 int main() {
     int tempo_global = 0;
 
