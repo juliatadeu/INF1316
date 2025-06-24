@@ -36,6 +36,16 @@ void print_usage() {
     printf("Exemplo: ./main nru 10\n");
 }
 
+// Função para registrar o page fault com informações detalhadas
+void print_page_fault(int gen_pid, int lost_pid, int page, int modified) {
+    printf("Page fault gerado por P%d: Página %d\n", gen_pid + 1, page);
+    printf("P%d perdeu o quadro de página\n", lost_pid + 1);
+    if (modified) {
+        printf("Page fault ocasionou uma escrita de página modificada (suja)\n");
+    }
+    printf("\n");
+}
+
 int main(int argc, char *argv[]) {
     // Verifica se o número de argumentos está correto
     if (argc != 3) {
@@ -131,6 +141,8 @@ int main(int argc, char *argv[]) {
 
             int page;
             char oper;
+            int page_modified = 0; // Para indicar se foi uma página modificada
+
             if (sscanf(buffer, "%d %c", &page, &oper) == 2) {
                 int before = page_faults;
 
@@ -145,8 +157,17 @@ int main(int argc, char *argv[]) {
                     run_lru(pt, frames, &page_faults, current, page, oper, tempo_global);
                 }
 
-                if (page_faults > before)
+                // Se houve um page fault, verifica se foi uma página modificada
+                if (page_faults > before) {
                     faults_por_processo[current]++;
+                    // Verifica se foi uma página "suja"
+                    if (oper == 'W') {
+                        page_modified = 1;
+                    }
+
+                    // Registra a informação do page fault
+                    print_page_fault(current, current, page, page_modified);
+                }
             }
         }
         tempo_global++;
