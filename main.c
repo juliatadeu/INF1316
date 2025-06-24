@@ -17,6 +17,11 @@ const char *filenames[] = {
     "acessos/acessos_P4"
 };
 
+void print_usage_and_exit() {
+    printf("Uso correto: ./main <algoritmo> <número de rodadas>\n");
+    printf("Algoritmos válidos: nru, 2ch, ws, lru\n");
+    exit(1);
+}
 
 algorithm_t get_algorithm(const char *algorithm_name) {
     if (strcmp(algorithm_name, "nru") == 0) return NRU;
@@ -30,20 +35,34 @@ void print_usage() {
     printf("Algoritmos disponíveis: nru, lru, 2ch, ws\n");
     printf("Exemplo: ./main nru 10\n");
 }
-int main() {
-    int tempo_global = 0;
 
-    char algoritmo[10];
-    int NUM_ROUNDS;
+int main(int argc, char *argv[]) {
+    // Verifica se o número de argumentos está correto
+    if (argc != 3) {
+        print_usage_and_exit();
+    }
 
-    printf("Digite o algoritmo (nru / 2ch / ws / lru): ");
-    scanf("%s", algoritmo);
-    printf("Digite o número de rodadas: ");
-    scanf("%d", &NUM_ROUNDS);
+    char *algoritmo = argv[1];
+    int NUM_ROUNDS = atoi(argv[2]);
 
+    // Verifica se o número de rodadas é válido
+    if (NUM_ROUNDS <= 0) {
+        printf("Erro: o número de rodadas deve ser um número inteiro positivo.\n");
+        print_usage_and_exit();
+    }
+
+    // Verifica se o algoritmo é válido
+    int algoritmo_valido = get_algorithm(algoritmo);
+    if (algoritmo_valido == 0) {
+        printf("Erro: Algoritmo inválido '%s'.\n", algoritmo);
+        print_usage_and_exit();
+    }
+
+    // Exibe informações sobre o algoritmo e o número de rodadas
     printf("\nAlgoritmo de Substituição: %s\n", algoritmo);
     printf("Rodadas executadas: %d\n\n", NUM_ROUNDS);
 
+    // Inicializa os componentes necessários
     pid_t children[NUM_PROCESSES];
     int pipes[NUM_PROCESSES][2];
     pagetable_t pt[NUM_PROCESSES];
@@ -51,6 +70,7 @@ int main() {
     working_set_t ws_hist[NUM_PROCESSES] = {0};
     int page_faults = 0;
     int faults_por_processo[NUM_PROCESSES] = {0};
+    int tempo_global = 0;
 
     init_pagetables(pt);
     init_frames(frames);
@@ -75,7 +95,7 @@ int main() {
                 perror("Erro ao abrir arquivo de acessos");
                 exit(1);
             }
-            raise(SIGSTOP);
+            raise(SIGSTOP); // Pausa o processo até o escalonador continuar
             char linha[MAX_LINE];
             for (int j = 0; j < NUM_ROUNDS; j++) {
                 if (fgets(linha, sizeof(linha), fp) != NULL) {
@@ -95,11 +115,12 @@ int main() {
         }
     }
 
-    usleep(100000);
+    usleep(100000); // Pequena pausa para garantir que os processos estejam prontos
+
     int current = 0;
     for (int r = 0; r < NUM_ROUNDS * NUM_PROCESSES; r++) {
         pid_t pid_atual = children[current];
-        kill(pid_atual, SIGCONT);
+        kill(pid_atual, SIGCONT); // Continua o processo
         sleep(1);
 
         char buffer[MAX_LINE] = {0};
@@ -113,21 +134,15 @@ int main() {
             if (sscanf(buffer, "%d %c", &page, &oper) == 2) {
                 int before = page_faults;
 
-                if (strcmp(algoritmo, "2ch") == 0) {
+                // Executa o algoritmo conforme a escolha do usuário
+                if (algoritmo_valido == 2) {  // Segundo Chance
                     run_2nCh(&pt[current], frames, &page_faults, current, page, oper);
-
-                } else if (strcmp(algoritmo, "nru") == 0) {
+                } else if (algoritmo_valido == 1) {  // NRU
                     run_nru(pt, frames, &page_faults, current, page, oper);
-
-                } else if (strcmp(algoritmo, "ws") == 0) {
+                } else if (algoritmo_valido == 3) {  // Working Set
                     run_ws(pt, frames, &page_faults, current, page, oper, ws_hist);
-
-                }
-                else if (strcmp(algoritmo, "lru") == 0) {
+                } else if (algoritmo_valido == 4) {  // LRU
                     run_lru(pt, frames, &page_faults, current, page, oper, tempo_global);
-                } else {
-                    fprintf(stderr, "Algoritmo não reconhecido: %s\n", algoritmo);
-                    exit(1);
                 }
 
                 if (page_faults > before)
@@ -136,8 +151,7 @@ int main() {
         }
         tempo_global++;
 
-
-        kill(pid_atual, SIGSTOP);
+        kill(pid_atual, SIGSTOP); // Pausa o processo
         current = (current + 1) % NUM_PROCESSES;
     }
 

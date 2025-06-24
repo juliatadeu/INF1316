@@ -12,3 +12,6 @@ typedef enum{
     WORKING_SET,
     INVALID_ALGORITHM
 } algorithm_t;
+
+algorithm_t get_algorithm(const char *algorithm_name);
+void print_usage();
