@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
     working_set_t ws_hist[NUM_PROCESSES] = {0};
     int page_faults = 0;
     int faults_por_processo[NUM_PROCESSES] = {0};
+    int dirty_writes = 0;  // Contador de páginas sujas
     int tempo_global = 0;
 
     init_pagetables(pt);
@@ -163,6 +164,7 @@ int main(int argc, char *argv[]) {
                     // Verifica se foi uma página "suja"
                     if (oper == 'W') {
                         page_modified = 1;
+                        dirty_writes++;
                     }
 
                     // Registra a informação do page fault
@@ -185,12 +187,15 @@ int main(int argc, char *argv[]) {
         close(pipes[i][0]);
     }
 
-    printf("\nTodos os processos filhos terminaram.\n");
-    printf("Page faults totais: %d\n", page_faults);
+    // Exibe o total de rodadas, page faults por processo e páginas sujas
+    printf("\nTotal de rodadas executadas: %d\n", NUM_ROUNDS);
+    printf("\nPage-faults por processo:\n");
     for (int i = 0; i < NUM_PROCESSES; i++) {
-        printf("P%d teve %d page faults\n", i + 1, faults_por_processo[i]);
+        printf("  P%d: %d\n", i + 1, faults_por_processo[i]);
     }
+    printf("\nTotal de páginas sujas escritas na swap: %d\n", dirty_writes);
 
+    // Exibe a tabela de processos
     for (int i = 0; i < NUM_PROCESSES; i++) {
         printf("\nTabela de páginas do processo %d:\n", i + 1);
         print_pagetable(&pt[i]);
