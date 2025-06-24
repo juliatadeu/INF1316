@@ -10,18 +10,20 @@
 #define MAX_LINE 100
 
 const char *filenames[] = {
-    "acessos/acessos_P1",
-    "acessos/acessos_P2",
-    "acessos/acessos_P3",
-    "acessos/acessos_P4"
+    "acessos/acessos_P1.txt",
+    "acessos/acessos_P2.txt",
+    "acessos/acessos_P3.txt",
+    "acessos/acessos_P4.txt"
 };
 
 
 int main() {
+    int tempo_global = 0;
+
     char algoritmo[10];
     int NUM_ROUNDS;
 
-    printf("Digite o algoritmo (nru / 2ch / ws): ");
+    printf("Digite o algoritmo (nru / 2ch / ws / lru): ");
     scanf("%s", algoritmo);
     printf("Digite o número de rodadas: ");
     scanf("%d", &NUM_ROUNDS);
@@ -107,6 +109,9 @@ int main() {
                 } else if (strcmp(algoritmo, "ws") == 0) {
                     run_ws(pt, frames, &page_faults, current, page, oper, ws_hist);
 
+                }
+                else if (strcmp(algoritmo, "lru") == 0) {
+                    run_lru(pt, frames, &page_faults, current, page, oper, tempo_global);
                 } else {
                     fprintf(stderr, "Algoritmo não reconhecido: %s\n", algoritmo);
                     exit(1);
@@ -116,6 +121,8 @@ int main() {
                     faults_por_processo[current]++;
             }
         }
+        tempo_global++;
+
 
         kill(pid_atual, SIGSTOP);
         current = (current + 1) % NUM_PROCESSES;

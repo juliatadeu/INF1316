@@ -3,29 +3,41 @@
 void init_pagetables(pagetable_t *pt) {
     for (int i = 0; i < NUM_PROCESSES; i++) {
         for (int j = 0; j < NUM_PAGES; j++) {
-            pt[i].table[j].present = 0;    // Página não está na memória inicialmente
-            pt[i].table[j].modified = 0;   // Página não foi modificada
-            pt[i].table[j].referenced = 0; // Página não foi referenciada
-            pt[i].table[j].frame_no = -1;  // Página não tem quadro de memória
+            pt[i].table[j].present = 0;
+            pt[i].table[j].modified = 0;
+            pt[i].table[j].referenced = 0;
+            pt[i].table[j].frame_no = -1;
+            pt[i].table[j].last_accessed = 0;
         }
     }
 }
 
 void init_frames(frame_t *frames) {
     for (int i = 0; i < NUM_FRAMES; i++) {
-        frames[i].pid = -1;   // Nenhum processo usando o quadro inicialmente
-        frames[i].page_no = -1; // Nenhuma página alocada ao quadro inicialmente
+        frames[i].pid = -1;
+        frames[i].page_no = -1;
     }
 }
 
+void update_access_time(pagetable_t *pt, int pid, int page, int time) {
+    pt[pid].table[page].last_accessed = time;
+}
+
+void print_pagetable(pagetable_t *pt) {
+    for (int i = 0; i < NUM_PAGES; i++) {
+        page_entry_t *p = &pt->table[i];
+        if (p->present) {
+            printf("Página %2d → Quadro %2d | R=%d M=%d\n", i, p->frame_no, p->referenced, p->modified);
+        }
+    }
+}
 
 void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type) {
     page_entry_t *entry = &pt->table[page];
 
     if (entry->present) {
         entry->referenced = 1;
-        if (access_type == WRITE)
-            entry->modified = 1;
+        if (access_type == WRITE) entry->modified = 1;
         return;
     }
 
@@ -36,7 +48,6 @@ void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int p
         if (frames[i].pid == -1) {
             frames[i].pid = pid;
             frames[i].page_no = page;
-
             entry->present = 1;
             entry->referenced = 1;
             entry->modified = (access_type == WRITE);
@@ -77,7 +88,6 @@ void run_2nCh(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int p
         }
     }
 }
-
 void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, int page, char access_type) {
     page_entry_t *entry = &pt_all[pid].table[page];
 
@@ -94,7 +104,6 @@ void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, in
         if (frames[i].pid == -1) {
             frames[i].pid = pid;
             frames[i].page_no = page;
-
             entry->present = 1;
             entry->referenced = 1;
             entry->modified = (access_type == WRITE);
@@ -103,15 +112,10 @@ void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, in
         }
     }
 
-    // Substituição NRU:
-    int best_class = 4;
-    int victim_index = -1;
-
+    int best_class = 4, victim_index = -1;
     for (int i = 0; i < NUM_FRAMES; i++) {
-        int vp = frames[i].page_no;
-        int vpid = frames[i].pid;
+        int vpid = frames[i].pid, vp = frames[i].page_no;
         page_entry_t *v = &pt_all[vpid].table[vp];
-
         int classe = (v->referenced << 1) | v->modified;
         if (classe < best_class) {
             best_class = classe;
@@ -121,12 +125,10 @@ void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, in
     }
 
     if (victim_index != -1) {
-        int victim_pid = frames[victim_index].pid;
-        int victim_page = frames[victim_index].page_no;
-        page_entry_t *victim = &pt_all[victim_pid].table[victim_page];
-
+        int vpid = frames[victim_index].pid, vpage = frames[victim_index].page_no;
+        page_entry_t *victim = &pt_all[vpid].table[vpage];
         if (victim->modified)
-            printf("Página suja: escrevendo P%d-pag%d no swap\n", victim_pid + 1, victim_page);
+            printf("Página suja: escrevendo P%d-pag%d no swap\n", vpid + 1, vpage);
 
         victim->present = 0;
         victim->modified = 0;
@@ -145,8 +147,6 @@ void run_nru(pagetable_t *pt_all, frame_t *frames, int *page_faults, int pid, in
 
 void run_ws(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type, working_set_t *ws_hist) {
     page_entry_t *entry = &pt[pid].table[page];
-
-    // Atualiza histórico
     ws_hist[pid].acesso[ws_hist[pid].ponteiro] = page;
     ws_hist[pid].ponteiro = (ws_hist[pid].ponteiro + 1) % WS_K;
 
@@ -171,32 +171,25 @@ void run_ws(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int pag
         }
     }
 
-    // Substituição com base em páginas fora da janela
     int candidata = -1;
     for (int i = 0; i < NUM_FRAMES; i++) {
-        int vpid = frames[i].pid;
-        int vpage = frames[i].page_no;
-        int na_janela = 0;
+        int vpid = frames[i].pid, vpage = frames[i].page_no;
+        int found = 0;
         for (int j = 0; j < WS_K; j++) {
             if (ws_hist[vpid].acesso[j] == vpage) {
-                na_janela = 1;
-                break;
+                found = 1; break;
             }
         }
-        if (!na_janela) {
-            candidata = i;
-            break;
+        if (!found) {
+            candidata = i; break;
         }
     }
+    if (candidata == -1) candidata = 0;
 
-    if (candidata == -1) candidata = 0; // fallback
-
-    int victim_pid = frames[candidata].pid;
-    int victim_page = frames[candidata].page_no;
-    page_entry_t *victim = &pt[victim_pid].table[victim_page];
-
+    int vpid = frames[candidata].pid, vpage = frames[candidata].page_no;
+    page_entry_t *victim = &pt[vpid].table[vpage];
     if (victim->modified)
-        printf("Página suja: escrevendo P%d-pag%d no swap\n", victim_pid + 1, victim_page);
+        printf("Página suja: escrevendo P%d-pag%d no swap\n", vpid + 1, vpage);
 
     victim->present = 0;
     victim->referenced = 0;
@@ -212,60 +205,65 @@ void run_ws(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int pag
     entry->frame_no = candidata;
 
     printf("→ Page-fault gerado por P%d, página %d\n", pid + 1, page);
-    printf("→ Quadro perdido por P%d\n", victim_pid + 1);
+    printf("→ Quadro perdido por P%d\n", vpid + 1);
 }
 
+void run_lru(pagetable_t *pt, frame_t *frames, int *page_faults, int pid, int page, char access_type, int time) {
+    page_entry_t *entry = &pt[pid].table[page];
 
-void print_pagetable(pagetable_t *pt) {
-    for (int i = 0; i < NUM_PAGES; i++) {
-        page_entry_t *p = &pt->table[i];
-        if (p->present) {
-            printf("Página %2d → Quadro %2d | R=%d M=%d\n", i, p->frame_no, p->referenced, p->modified);
-        }
+    if (entry->present) {
+        entry->referenced = 1;
+        if (access_type == WRITE) entry->modified = 1;
+        update_access_time(pt, pid, page, time);
+        return;
     }
-}
 
-void run_lru(pagetable_t *pt, frame_t *frames, int *page_faults) {
-    int i, j;
-    int page_to_replace = -1;
-    int frame_to_replace = -1;
-    int oldest_access_time = -1;
+    printf("PAGE FAULT: Processo %d, página %d\n", pid + 1, page);
+    (*page_faults)++;
 
-    // Percorre os quadros de memória para encontrar o quadro a ser substituído
-    for (i = 0; i < NUM_FRAMES; i++) {
-        if (frames[i].page_no != -1) {  // Se o quadro está ocupado
-            int pid = frames[i].pid;
-            int page_no = frames[i].page_no;
-
-            // Verifica o tempo do último acesso da página nesse quadro
-            int access_time = pt[pid].table[page_no].last_accessed;
-
-            // Se essa página foi menos recentemente usada, ela é a candidata a substituição
-            if (oldest_access_time == -1 || access_time < oldest_access_time) {
-                oldest_access_time = access_time;
-                page_to_replace = page_no;
-                frame_to_replace = i;
-            }
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (frames[i].pid == -1) {
+            frames[i].pid = pid;
+            frames[i].page_no = page;
+            entry->present = 1;
+            entry->referenced = 1;
+            entry->modified = (access_type == WRITE);
+            entry->frame_no = i;
+            update_access_time(pt, pid, page, time);
+            return;
         }
     }
 
-    // Se encontrou uma página a ser substituída, faz a substituição
-    if (page_to_replace != -1) {
-        // Substitui a página no quadro
-        printf("Substituindo a página %d do processo %d pelo quadro %d\n", page_to_replace, frames[frame_to_replace].pid, frame_to_replace);
-
-        // Atualiza a página no quadro
-        frames[frame_to_replace].page_no = page_to_replace;
-        frames[frame_to_replace].pid = pt[frames[frame_to_replace].pid].table[page_to_replace].frame_no;
-
-        // Marca um page-fault
-        (*page_faults)++;
+    int victim_index = -1, oldest = __INT_MAX__;
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        int vpid = frames[i].pid, vpage = frames[i].page_no;
+        page_entry_t *v = &pt[vpid].table[vpage];
+        if (v->last_accessed < oldest) {
+            oldest = v->last_accessed;
+            victim_index = i;
+        }
     }
-    else {
-        printf("Nenhuma página encontrada para substituição (todas estão em uso recente).\n");
-    }
+
+    int vpid = frames[victim_index].pid, vpage = frames[victim_index].page_no;
+    page_entry_t *victim = &pt[vpid].table[vpage];
+    if (victim->modified)
+        printf("Página suja: escrevendo P%d-pag%d no swap\n", vpid + 1, vpage);
+
+    victim->present = 0;
+    victim->referenced = 0;
+    victim->modified = 0;
+    victim->frame_no = -1;
+
+    frames[victim_index].pid = pid;
+    frames[victim_index].page_no = page;
+
+    entry->present = 1;
+    entry->referenced = 1;
+    entry->modified = (access_type == WRITE);
+    entry->frame_no = victim_index;
+    update_access_time(pt, pid, page, time);
+
+    printf("→ Page-fault gerado por P%d, página %d\n", pid + 1, page);
+    printf("→ Quadro perdido por P%d\n", vpid + 1);
 }
 
-void update_access_time(pagetable_t *pt, int pid, int page_no, int current_time) {
-    pt[pid].table[page_no].last_accessed = current_time;
-}
