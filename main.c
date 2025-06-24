@@ -10,10 +10,10 @@
 #define MAX_LINE 100
 
 const char *filenames[] = {
-    "acessos/acessos_P1.txt",
-    "acessos/acessos_P2.txt",
-    "acessos/acessos_P3.txt",
-    "acessos/acessos_P4.txt"
+    "acessos/acessos_P1",
+    "acessos/acessos_P2",
+    "acessos/acessos_P3",
+    "acessos/acessos_P4"
 };
 
 
